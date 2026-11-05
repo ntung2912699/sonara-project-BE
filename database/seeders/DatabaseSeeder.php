@@ -16,11 +16,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(ApiMessageSeeder::class);
 
-        if ($this->app->environment('production')) {
-            $this->call([
-                DemoCatalogSeeder::class,
-                DemoAdminSeeder::class,
-            ]);
+        if (app()->environment('production')) {
+            $this->call(DemoCatalogSeeder::class);
         }
     }
 }
