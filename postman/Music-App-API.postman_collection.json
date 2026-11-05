@@ -1,0 +1,666 @@
+{
+  "info": {
+    "_postman_id": "949f6c87-b1cc-4fb9-909c-2cf25a96a21d",
+    "name": "Music App API",
+    "description": "Laravel music API. Registration sends an OTP to the selected email/iCloud mailbox or Zalo phone; verify registration to receive a token. Set base_url. Social auth requires real provider credentials and an app token. Audio processing accepts only rights-cleared WAV/AIFF/FLAC masters and requires FFmpeg/FFprobe plus a queue worker.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const contentType = pm.response.headers.get('Content-Type') || '';",
+          "if (contentType.includes('application/json')) {",
+          "  const body = pm.response.json();",
+          "  pm.test('JSON API response uses the common envelope', function () {",
+          "    pm.expect(body).to.have.property('success');",
+          "    pm.expect(body).to.have.property('message');",
+          "    pm.expect(body.message).to.have.property('code');",
+          "    pm.expect(body).to.have.property('data');",
+          "  });",
+          "  if (body.success && body.data && body.data.token) {",
+          "    pm.collectionVariables.set('token', body.data.token);",
+          "  }",
+          "  if (body.success && body.data && body.data.challenge_id) {",
+          "    pm.collectionVariables.set('registration_challenge_id', body.data.challenge_id);",
+          "  }",
+          "  if (body.success && body.data && body.data.id && pm.request.url.toString().includes('/playlists')) {",
+          "    pm.collectionVariables.set('playlist_id', body.data.id);",
+          "  }",
+          "  if (body.success && body.data && body.data.id && pm.request.url.toString().endsWith('/audio-processing')) {",
+          "    pm.collectionVariables.set('audio_processing_id', body.data.id);",
+          "  }",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000/api"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "email",
+      "value": "listener@example.com"
+    },
+    {
+      "key": "password",
+      "value": "StrongPassword123!"
+    },
+    {
+      "key": "registration_challenge_id",
+      "value": ""
+    },
+    {
+      "key": "zalo_phone",
+      "value": "+84901234567"
+    },
+    {
+      "key": "password_reset_token",
+      "value": "paste-token-from-reset-email"
+    },
+    {
+      "key": "track_id",
+      "value": "1"
+    },
+    {
+      "key": "playlist_id",
+      "value": "1"
+    },
+    {
+      "key": "audio_processing_id",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register with email",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/register",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Music Listener\",\n  \"channel\": \"email\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"password_confirmation\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Register with iCloud email",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/register",
+            "description": "Use channel=icloud with an iCloud mailbox address. The OTP is delivered by email.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"iCloud Listener\",\n  \"channel\": \"icloud\",\n  \"email\": \"listener@icloud.com\",\n  \"password\": \"{{password}}\",\n  \"password_confirmation\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Register with Zalo phone",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/register",
+            "description": "Phone must be E.164 formatted. Zalo OA access token and a ZNS OTP template must be configured on the backend.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Zalo Listener\",\n  \"channel\": \"zalo\",\n  \"phone\": \"{{zalo_phone}}\",\n  \"password\": \"{{password}}\",\n  \"password_confirmation\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Verify registration OTP",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/register/verify",
+            "description": "Enter the 6-digit code delivered to the selected email/iCloud or Zalo destination. Successful verification creates the account and saves its bearer token.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"challenge_id\": \"{{registration_challenge_id}}\",\n  \"code\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Resend registration OTP",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/register/resend-otp",
+            "description": "Resend after the 60-second cooldown. Limited to 5 resends per challenge.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"challenge_id\": \"{{registration_challenge_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Login with email",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Sign in with Facebook access token",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/facebook",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"access_token\": \"replace-with-facebook-user-access-token\",\n  \"name\": \"Optional display name\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Sign in with TikTok access token",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/tiktok",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"access_token\": \"replace-with-tiktok-user-access-token\",\n  \"name\": \"Optional display name\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Sign in with Apple (iCloud)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/apple",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identity_token\": \"replace-with-apple-sign-in-identity-jwt\",\n  \"name\": \"Optional display name\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Request password reset",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/forgot-password",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reset password",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/reset-password",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{password_reset_token}}\",\n  \"email\": \"{{email}}\",\n  \"password\": \"NewStrongPassword123!\",\n  \"password_confirmation\": \"NewStrongPassword123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "Get my profile",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/profile"
+          }
+        },
+        {
+          "name": "Update profile fields",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/profile",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Music Listener\",\n  \"bio\": \"Music fan\",\n  \"favorite_items\": [\"jazz\", \"ambient\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update profile avatar",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/profile",
+            "description": "Use form-data; select an image file for avatar. The API accepts PUT for the JSON profile fields; use POST here for the multipart avatar upload.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "_method",
+                  "value": "PUT",
+                  "type": "text"
+                },
+                {
+                  "key": "name",
+                  "value": "Music Listener",
+                  "type": "text"
+                },
+                {
+                  "key": "avatar",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tracks and library",
+      "item": [
+        {
+          "name": "Search tracks",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/tracks?q=ambient&per_page=20&page=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracks"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "ambient",
+                  "description": "Optional search text for title, artist, or album."
+                },
+                {
+                  "key": "per_page",
+                  "value": "20"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get track",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/tracks/{{track_id}}"
+          }
+        },
+        {
+          "name": "Download licensed track",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/tracks/{{track_id}}/download",
+            "description": "Returns the licensed audio file as a binary download and records it in the current user's downloads."
+          }
+        },
+        {
+          "name": "List my downloads",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/me/downloads"
+          }
+        },
+        {
+          "name": "List my favorites",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/me/favorites"
+          }
+        },
+        {
+          "name": "Favorite a track",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/tracks/{{track_id}}/favorite"
+          }
+        },
+        {
+          "name": "Unfavorite a track",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/tracks/{{track_id}}/favorite"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Playlists",
+      "item": [
+        {
+          "name": "List my playlists",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/playlists"
+          }
+        },
+        {
+          "name": "Create playlist",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/playlists",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Late Night Mix\",\n  \"description\": \"A relaxed playlist\",\n  \"is_public\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get playlist",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/playlists/{{playlist_id}}"
+          }
+        },
+        {
+          "name": "Update playlist",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/playlists/{{playlist_id}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Late Night Mix\",\n  \"description\": \"Updated description\",\n  \"is_public\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Add track to playlist",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/playlists/{{playlist_id}}/tracks/{{track_id}}"
+          }
+        },
+        {
+          "name": "Remove track from playlist",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/playlists/{{playlist_id}}/tracks/{{track_id}}"
+          }
+        },
+        {
+          "name": "Delete playlist",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/playlists/{{playlist_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TikTok rights review",
+      "item": [
+        {
+          "name": "List TikTok import requests",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/me/tiktok-imports"
+          }
+        },
+        {
+          "name": "Submit a TikTok video for rights review",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/tiktok-imports",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"video_url\": \"https://www.tiktok.com/@creator/video/1234567890\",\n  \"rights_confirmed\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audio processing",
+      "item": [
+        {
+          "name": "Upload lossless master for processing",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/audio-processing",
+            "description": "Use multipart form-data. Select a WAV, AIFF, or FLAC audio master up to 200 MiB, plus rights_confirmed=true. Returns a queued job; run a database queue worker and configure FFmpeg/FFprobe.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "audio",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "rights_confirmed",
+                  "value": "true",
+                  "type": "text"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get audio processing status",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/audio-processing/{{audio_processing_id}}"
+          }
+        },
+        {
+          "name": "Download preserved master",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/audio-processing/{{audio_processing_id}}/files/master"
+          }
+        },
+        {
+          "name": "Download normalized AAC",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/audio-processing/{{audio_processing_id}}/files/aac"
+          }
+        },
+        {
+          "name": "Download normalized MP3",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/audio-processing/{{audio_processing_id}}/files/mp3"
+          }
+        }
+      ]
+    }
+  ]
+}
