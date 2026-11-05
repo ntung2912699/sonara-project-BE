@@ -24,7 +24,9 @@ Configure these values in Render's private environment settings before deploying
 - SMTP settings (`MAIL_MAILER=smtp`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME`) for registration codes and password-reset links.
 - `CACHE_STORE=database`, `SESSION_DRIVER=database`, and `QUEUE_CONNECTION=database`.
 
-The container entrypoint applies migrations, seeds API response messages, and creates the public-storage link on startup. It does not create administrator accounts; after signing up, promote your account from the Render Shell with `php artisan users:promote-admin your-login-email@example.com`. Store the APP key, database URL, and mail credentials only in Render's private environment settings, never in Git or chat.
+The container entrypoint applies migrations, seeds API response messages, and creates the public-storage link on startup. In production, the seeder also inserts metadata for the three demo tracks; audio files are not included in the repository or Docker image, so playback remains unavailable until audio is uploaded. Free instances have no persistent disk, so uploaded audio and avatars can be lost when the service restarts.
+
+To provision the initial demo administrator without shell access, set `DEMO_ADMIN_EMAIL` (defaults to `admin@sonara.demo`) and a private `DEMO_ADMIN_PASSWORD` of at least 16 characters in Render's environment settings. The seeder creates this verified admin once and does not reset its password on subsequent deploys. If no password is configured, no demo admin is created. Store the APP key, database URL, admin password, and mail credentials only in Render's private environment settings, never in Git or chat.
 
 To build the image locally from this repository root, run `docker build -t sonora-api .`. The Docker build excludes local `.env`, vendor, and generated files.
 

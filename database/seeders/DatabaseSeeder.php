@@ -15,5 +15,12 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(ApiMessageSeeder::class);
+
+        if ($this->app->environment('production')) {
+            $this->call([
+                DemoCatalogSeeder::class,
+                DemoAdminSeeder::class,
+            ]);
+        }
     }
 }
