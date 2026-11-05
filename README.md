@@ -22,6 +22,7 @@ Configure these values in Render's private environment settings before deploying
 - `FILESYSTEM_DISK=public` and a persistent disk mounted at `/var/www/html/storage/app`; the container filesystem itself is not persistent.
 - `CORS_ALLOWED_ORIGINS` set to the frontend HTTPS origin only.
 - SMTP settings (`MAIL_MAILER=smtp`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME`) for registration codes and password-reset links.
+- `YOUTUBE_API_KEY` from a Google Cloud project with YouTube Data API v3 enabled; restrict the key to that API and keep it only in Render's private environment settings.
 - `CACHE_STORE=database`, `SESSION_DRIVER=database`, and `QUEUE_CONNECTION=database`.
 
 The container entrypoint applies migrations, seeds API response messages, and creates the public-storage link on startup. In production, the seeder also inserts metadata for the three demo tracks; audio files are not included in the repository or Docker image, so playback remains unavailable until audio is uploaded. Free instances have no persistent disk, so uploaded audio and avatars can be lost when the service restarts.
@@ -117,13 +118,16 @@ Accept: application/json
 | GET | `/api/me/tiktok-imports` | Authenticated | List TikTok import review requests |
 | POST | `/api/tiktok-imports` | Authenticated | Submit an HTTPS TikTok URL with `rights_confirmed: true` |
 | POST | `/api/karaoke/recordings` | Authenticated | Publish a recorded karaoke mix as multipart `audio`, `title`, and `rights_confirmed` fields |
+| GET | `/api/karaoke/youtube-search?q=...` | Authenticated | Search embeddable YouTube videos for karaoke beats (requires `YOUTUBE_API_KEY`) |
 | POST | `/api/audio-processing` | Authenticated | Submit rights-cleared WAV/AIFF/FLAC master audio as multipart form-data |
 | GET | `/api/audio-processing/{audioProcessing}` | Authenticated | Check queued audio processing status |
 | GET | `/api/audio-processing/{audioProcessing}/files/{format}` | Authenticated | Download `master`, normalized `aac`, or normalized `mp3` |
 
-The browser karaoke studio can mix a catalog beat or a locally selected backing track with microphone input, then export the recording or save it as a draft in that browser's IndexedDB. Drafts are device/browser-local and are not synced. Publishing creates a catalog track and requires the uploader to confirm distribution rights for the entire recording, including the backing audio. Lyrics, duet rooms, and mobile packaging are not included in this phase.
+The browser karaoke studio searches both Sonora and YouTube. Sonora/local audio beats are mixed with microphone audio; YouTube results play in YouTube's official embedded player, and only the microphone and voice effects are recorded because YouTube audio is not captured or redistributed. YouTube search requires `YOUTUBE_API_KEY`; requests are authenticated, rate limited, and cached briefly. The browser can export the recording or save a draft in that browser's IndexedDB. Drafts are device/browser-local and are not synced. Publishing a Sonora/local beat mix requires the uploader to confirm distribution rights for the entire recording, including the backing audio; YouTube-backed recordings require confirmation for the recorded vocals. Lyrics, duet rooms, and mobile packaging are not included in this phase.
 
-Track search only returns tracks provisioned in the catalog. A track is downloadable only when its `downloadable` flag is true and its licensed audio file exists on the configured `public` storage disk. Keep catalog provisioning restricted to trusted administrators or a licensed provider; this starter API intentionally does not expose an upload endpoint for arbitrary audio.
+The global web player has a dedicated Now Playing screen, a current-list queue, automatic next-track playback, shuffle, and repeat off/list/one modes. It does not retrieve or download audio from YouTube.
+
+Track search only returns tracks provisioned in the catalog. A track is downloadable only when its `downloadable` flag is true and its licensed audio file exists on the configured `public` storage disk. Keep general catalog provisioning restricted to trusted administrators or a licensed provider. The karaoke publication endpoint is a separate, authenticated exception and requires uploader rights confirmation.
 
 TikTok submissions are stored with `review_required` status and a rights-attestation timestamp. This project does not scrape TikTok, bypass access controls, or extract audio from arbitrary video links. Completing an authorized import requires a rights-review workflow and an integration that is permitted to provide the audio.
 

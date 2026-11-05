@@ -49,6 +49,10 @@ return [
         'client_id' => env('APPLE_CLIENT_ID'),
     ],
 
+    'youtube' => [
+        'api_key' => env('YOUTUBE_API_KEY'),
+    ],
+
     'zalo' => [
         'access_token' => env('ZALO_OA_ACCESS_TOKEN'),
         'otp_template_id' => env('ZALO_OTP_TEMPLATE_ID'),
