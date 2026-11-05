@@ -34,6 +34,8 @@ php artisan users:promote-admin your-login-email@example.com
 
 Store the APP key, database URL, and mail credentials only in Render's private environment settings, never in Git or chat.
 
+Registration OTP delivery failures return HTTP 503 and are logged by the API. Configure working SMTP settings in Render before users sign up; a failed initial delivery does not leave an unusable registration challenge behind.
+
 To build the image locally from this repository root, run `docker build -t sonora-api .`. The Docker build excludes local `.env`, vendor, and generated files.
 
 ```powershell

@@ -3,12 +3,14 @@
 namespace Tests\Feature\Api;
 
 use App\Models\User;
+use App\Services\RegistrationOtpDelivery;
 use Database\Seeders\ApiMessageSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Tests\TestCase;
 
 class AuthAndProfileTest extends TestCase
@@ -32,6 +34,28 @@ class AuthAndProfileTest extends TestCase
             ->assertJsonStructure(['data' => ['challenge_id', 'channel', 'destination', 'expires_at']]);
 
         $this->assertDatabaseCount('users', 0);
+    }
+
+    public function test_registration_returns_service_unavailable_when_otp_delivery_fails(): void
+    {
+        $this->seed(ApiMessageSeeder::class);
+        $this->mock(RegistrationOtpDelivery::class)
+            ->shouldReceive('send')
+            ->once()
+            ->andThrow(new RuntimeException('SMTP connection failed.'));
+
+        $this->postJson('/api/register', [
+            'name' => 'Test Listener',
+            'channel' => 'email',
+            'email' => 'listener@example.com',
+            'password' => 'StrongPassword123!',
+            'password_confirmation' => 'StrongPassword123!',
+        ])
+            ->assertServiceUnavailable()
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message.code', 'service.unavailable');
+
+        $this->assertDatabaseCount('registration_otps', 0);
     }
 
     public function test_a_user_can_update_their_profile(): void

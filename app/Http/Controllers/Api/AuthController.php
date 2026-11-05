@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Throwable;
 
 class AuthController extends Controller
 {
@@ -80,7 +82,10 @@ class AuthController extends Controller
             ]);
         });
 
-        $delivery->send($challenge, $code);
+        $deliveryError = $this->deliverRegistrationOtp($delivery, $challenge, $code);
+        if ($deliveryError !== null) {
+            return $deliveryError;
+        }
 
         return ApiResponse::success([
             'challenge_id' => $challenge->public_id,
@@ -118,7 +123,10 @@ class AuthController extends Controller
             'last_sent_at' => now(),
             'attempts' => 0,
         ]);
-        $delivery->send($challenge, $code);
+        $deliveryError = $this->deliverRegistrationOtp($delivery, $challenge, $code, discardOnFailure: false);
+        if ($deliveryError !== null) {
+            return $deliveryError;
+        }
 
         return ApiResponse::success([
             'challenge_id' => $challenge->public_id,
@@ -289,5 +297,29 @@ class AuthController extends Controller
         [$local, $domain] = explode('@', $destination, 2);
 
         return substr($local, 0, 1).str_repeat('*', max(1, strlen($local) - 1)).'@'.$domain;
+    }
+
+    private function deliverRegistrationOtp(
+        RegistrationOtpDelivery $delivery,
+        RegistrationOtp $challenge,
+        string $code,
+        bool $discardOnFailure = true,
+    ): ?JsonResponse {
+        try {
+            $delivery->send($challenge, $code);
+
+            return null;
+        } catch (Throwable $exception) {
+            report($exception);
+            if ($discardOnFailure) {
+                $challenge->delete();
+            }
+
+            $status = $exception instanceof HttpExceptionInterface
+                ? $exception->getStatusCode()
+                : 503;
+
+            return ApiResponse::error($status === 503 ? 'service.unavailable' : 'request.failed', $status);
+        }
     }
 }
