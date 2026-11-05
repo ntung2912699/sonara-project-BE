@@ -10,6 +10,24 @@ A Laravel 13 JSON API for email and social sign-in, profile management, a licens
 - FFmpeg and FFprobe on the queue worker for audio processing
 - A configured Laravel filesystem disk for profile images and licensed audio
 
+## Render Docker deployment
+
+Connect this backend repository to Render as a **Web Service**, select **Docker** as the runtime, set the Dockerfile path to `./Dockerfile`, and use the repository root as the build context. The included Dockerfile serves Laravel on port `10000`, installs FFmpeg for the audio queue worker, and starts Apache and the worker together. The health-check path is `/up`.
+
+Configure these values in Render's private environment settings before deploying:
+
+- `APP_ENV=production`, `APP_DEBUG=false`, and a newly generated `APP_KEY` (`php artisan key:generate --show` generates a value; set it privately in Render).
+- `APP_URL` to the deployed API HTTPS URL and `FRONTEND_URL` to the deployed website HTTPS URL.
+- `DB_CONNECTION=pgsql` and `DATABASE_URL` (or `DB_URL`) from a Render PostgreSQL database.
+- `FILESYSTEM_DISK=public` and a persistent disk mounted at `/var/www/html/storage/app`; the container filesystem itself is not persistent.
+- `CORS_ALLOWED_ORIGINS` set to the frontend HTTPS origin only.
+- SMTP settings (`MAIL_MAILER=smtp`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME`) for registration codes and password-reset links.
+- `CACHE_STORE=database`, `SESSION_DRIVER=database`, and `QUEUE_CONNECTION=database`.
+
+The container entrypoint applies migrations, seeds API response messages, and creates the public-storage link on startup. It does not create administrator accounts; after signing up, promote your account from the Render Shell with `php artisan users:promote-admin your-login-email@example.com`. Store the APP key, database URL, and mail credentials only in Render's private environment settings, never in Git or chat.
+
+To build the image locally from this repository root, run `docker build -t sonora-api .`. The Docker build excludes local `.env`, vendor, and generated files.
+
 ```powershell
 composer install
 Copy-Item .env.example .env

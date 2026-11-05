@@ -19,17 +19,17 @@ RUN apt-get update \
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
-COPY music-app-be/ /var/www/html/
+COPY . /var/www/html/
 
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader \
     && mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views \
         storage/logs storage/app/public storage/app/private bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache
 
-COPY music-app-be/deployment/apache-vhost.conf /etc/apache2/sites-available/sonora.conf
-COPY music-app-be/deployment/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
-COPY music-app-be/deployment/supervisord.conf /etc/supervisor/conf.d/sonora.conf
-COPY music-app-be/deployment/entrypoint.sh /usr/local/bin/sonora-entrypoint
+COPY deployment/apache-vhost.conf /etc/apache2/sites-available/sonora.conf
+COPY deployment/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
+COPY deployment/supervisord.conf /etc/supervisor/conf.d/sonora.conf
+COPY deployment/entrypoint.sh /usr/local/bin/sonora-entrypoint
 
 RUN chmod +x /usr/local/bin/sonora-entrypoint \
     && a2ensite sonora.conf
