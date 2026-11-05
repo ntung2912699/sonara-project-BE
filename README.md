@@ -116,9 +116,12 @@ Accept: application/json
 | DELETE | `/api/playlists/{playlist}/tracks/{track}` | Authenticated | Remove a track |
 | GET | `/api/me/tiktok-imports` | Authenticated | List TikTok import review requests |
 | POST | `/api/tiktok-imports` | Authenticated | Submit an HTTPS TikTok URL with `rights_confirmed: true` |
+| POST | `/api/karaoke/recordings` | Authenticated | Publish a recorded karaoke mix as multipart `audio`, `title`, and `rights_confirmed` fields |
 | POST | `/api/audio-processing` | Authenticated | Submit rights-cleared WAV/AIFF/FLAC master audio as multipart form-data |
 | GET | `/api/audio-processing/{audioProcessing}` | Authenticated | Check queued audio processing status |
 | GET | `/api/audio-processing/{audioProcessing}/files/{format}` | Authenticated | Download `master`, normalized `aac`, or normalized `mp3` |
+
+The browser karaoke studio can mix a catalog beat or a locally selected backing track with microphone input, then export the recording or save it as a draft in that browser's IndexedDB. Drafts are device/browser-local and are not synced. Publishing creates a catalog track and requires the uploader to confirm distribution rights for the entire recording, including the backing audio. Lyrics, duet rooms, and mobile packaging are not included in this phase.
 
 Track search only returns tracks provisioned in the catalog. A track is downloadable only when its `downloadable` flag is true and its licensed audio file exists on the configured `public` storage disk. Keep catalog provisioning restricted to trusted administrators or a licensed provider; this starter API intentionally does not expose an upload endpoint for arbitrary audio.
 

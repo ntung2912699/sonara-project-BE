@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AudioProcessingController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\KaraokeRecordingController;
 use App\Http\Controllers\Api\PlaylistController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\SocialAuthController;
@@ -35,6 +36,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
     Route::get('/me/downloads', [TrackController::class, 'downloads']);
     Route::get('/me/tracks', [TrackController::class, 'myUploads']);
     Route::post('/tracks', [TrackController::class, 'store']);
+    Route::post('/karaoke/recordings', [KaraokeRecordingController::class, 'store']);
     Route::delete('/tracks/{track}', [TrackController::class, 'destroyUploaded']);
     Route::post('/tracks/{track}/reports', [SongReportController::class, 'store']);
     Route::get('/tracks/{track}/download', [TrackController::class, 'download']);
