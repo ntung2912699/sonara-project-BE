@@ -20,7 +20,7 @@ Configure these values in Render's private environment settings before deploying
 - `APP_URL` to the deployed API HTTPS URL and `FRONTEND_URL` to the deployed website HTTPS URL.
 - `DB_CONNECTION=pgsql` and `DATABASE_URL` (or `DB_URL`) from a Render PostgreSQL database.
 - `FILESYSTEM_DISK=public` and a persistent disk mounted at `/var/www/html/storage/app`; the container filesystem itself is not persistent.
-- `CORS_ALLOWED_ORIGINS` set to the frontend HTTPS origin only.
+- `CORS_ALLOWED_ORIGINS` set to the frontend HTTPS origin; the API also permits the standard Capacitor Android/iOS localhost origins.
 - SMTP settings (`MAIL_MAILER=smtp`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME`) for registration codes and password-reset links.
 - `YOUTUBE_API_KEY` from a Google Cloud project with YouTube Data API v3 enabled; restrict the key to that API and keep it only in Render's private environment settings.
 - `CACHE_STORE=database`, `SESSION_DRIVER=database`, and `QUEUE_CONNECTION=database`.
@@ -119,11 +119,17 @@ Accept: application/json
 | POST | `/api/tiktok-imports` | Authenticated | Submit an HTTPS TikTok URL with `rights_confirmed: true` |
 | POST | `/api/karaoke/recordings` | Authenticated | Publish a recorded karaoke mix as multipart `audio`, `title`, and `rights_confirmed` fields |
 | GET | `/api/karaoke/youtube-search?q=...` | Authenticated | Search embeddable YouTube videos for karaoke beats (requires `YOUTUBE_API_KEY`) |
+| POST | `/api/karaoke/rooms` | Authenticated | Create a two-person duet room for a Sonora catalog or YouTube beat |
+| GET | `/api/karaoke/rooms/{code}` | Room members | Read room status and exchange WebRTC offer/answer signals |
+| POST | `/api/karaoke/rooms/{code}/join` | Authenticated | Join a waiting duet room by its code |
+| POST | `/api/karaoke/rooms/{code}/signal` | Room members | Exchange the peer-to-peer voice connection offer/answer |
+| POST | `/api/karaoke/rooms/{code}/start` | Room host | Schedule a shared recording start |
+| POST | `/api/karaoke/rooms/{code}/leave` | Room members | Leave the room or close it as host |
 | POST | `/api/audio-processing` | Authenticated | Submit rights-cleared WAV/AIFF/FLAC master audio as multipart form-data |
 | GET | `/api/audio-processing/{audioProcessing}` | Authenticated | Check queued audio processing status |
 | GET | `/api/audio-processing/{audioProcessing}/files/{format}` | Authenticated | Download `master`, normalized `aac`, or normalized `mp3` |
 
-The browser karaoke studio searches both Sonora and YouTube. Sonora/local audio beats are mixed with microphone audio; YouTube results play in YouTube's official embedded player, and only the microphone and voice effects are recorded because YouTube audio is not captured or redistributed. YouTube search requires `YOUTUBE_API_KEY`; requests are authenticated, rate limited, and cached briefly. The browser can export the recording or save a draft in that browser's IndexedDB. Drafts are device/browser-local and are not synced. Publishing a Sonora/local beat mix requires the uploader to confirm distribution rights for the entire recording, including the backing audio; YouTube-backed recordings require confirmation for the recorded vocals. Lyrics, duet rooms, and mobile packaging are not included in this phase.
+The browser karaoke studio searches both Sonora and YouTube. Sonora/local audio beats are mixed with microphone audio; YouTube results play in YouTube's official embedded player, and YouTube audio is not captured or redistributed. YouTube search requires `YOUTUBE_API_KEY`; requests are authenticated, rate limited, and cached briefly. Duet rooms use a short room code, synchronize the recording start, and connect singers peer-to-peer with WebRTC; each singer's recording includes both live voices. STUN is used for connectivity, so some restricted networks may require a TURN service. Drafts remain local to the device/browser. Publishing a Sonora/local beat mix requires rights confirmation for the full recording; YouTube-backed recordings require rights confirmation for the recorded vocals.
 
 The global web player has a dedicated Now Playing screen, a current-list queue, automatic next-track playback, shuffle, and repeat off/list/one modes. It does not retrieve or download audio from YouTube.
 

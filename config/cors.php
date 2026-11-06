@@ -19,9 +19,9 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => array_values(array_filter(array_map(
-        'trim',
-        explode(',', env('CORS_ALLOWED_ORIGINS', '*')),
+    'allowed_origins' => array_values(array_unique(array_merge(
+        array_filter(array_map('trim', explode(',', env('CORS_ALLOWED_ORIGINS', '*')))),
+        ['capacitor://localhost', 'https://localhost', 'http://localhost'],
     ))),
 
     'allowed_origins_patterns' => [],
