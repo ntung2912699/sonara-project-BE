@@ -24,9 +24,12 @@ class DemoDeploymentSeederTest extends TestCase
 
     public function test_production_seeding_does_not_create_an_admin_account(): void
     {
-        config(['app.env' => 'production']);
+        $this->app['env'] = 'production';
 
-        $this->seed(DatabaseSeeder::class);
+        $this->artisan('db:seed', [
+            '--class' => DatabaseSeeder::class,
+            '--force' => true,
+        ])->assertExitCode(0);
 
         $this->assertSame(3, Track::query()->count());
         $this->assertSame(0, User::query()->count());
